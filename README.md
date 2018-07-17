@@ -13,7 +13,7 @@ If your code is like this
 		http.HandleFunc("/myapi/", apiHandler)
 		...
 	}
-	// request handler with a expensive backend function
+	// request handler with an expensive backend function
 	func apiHandler(w http.ResponseWriter, r *http.Request) {
 		...
 		result := complexBackendFunction() // takes long time to come back
@@ -28,12 +28,12 @@ you have to add or modify some lines, so it looks like this
 		http.HandleFunc("/myapi/", apiHandler)
 		...
 	}
-	// request handler with a expensive backend function
+	// request handler with an expensive backend function
 	func apiHandler(w http.ResponseWriter, r *http.Request) {
 		...
 		if !apiCache.Valid() {
 			if apiCache.StartUpdate() == nil {
-				result := complexBackendFunction() // takes long time to come back
+				apiCache.Write(complexBackendFunction())
 				apiCache.EndUpdate()
 			}
 		}
