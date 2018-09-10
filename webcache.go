@@ -1,6 +1,22 @@
 // dheilema 2018
 // web cache
 
+/*
+package webcache is a lightweight memory cache for go web servers that you
+can wrap around time consuming requests. Instead of
+ result := complexBackendFunction() // takes long time to come back
+ w.Write(result)
+Wrap in with a Cache object
+ if !apiCache.Valid() {
+   if apiCache.StartUpdate() == nil {
+     apiCache.Write(complexBackendFunction())
+     apiCache.EndUpdate()
+   }
+ }
+ w.Write(apiCache.Get())
+You can find a longer introduction and an example server at
+https://github.com/Nexinto/webcache
+*/
 package webcache
 
 import (
@@ -10,11 +26,12 @@ import (
 )
 
 var (
-	ErrUpdateInProgress   = errors.New("Another Update is arleady running")
+	ErrUpdateInProgress   = errors.New("Another Update is already running")
 	ErrWriteWithoutUpdate = errors.New("Writing to struct without StartUpdate()")
 )
 
-// the struct to store page data
+// CachedPage stores the page data. There is no direct access to the fields
+// and a mutex is used to protect updates.
 type CachedPage struct {
 	sync.RWMutex
 	updating     bool
@@ -26,7 +43,8 @@ type CachedPage struct {
 	updates      uint64
 }
 
-// create a new CachedPage
+// creates a new CachedPage
+//
 // maxAge defines how long the content will stay valid
 // after an update
 func NewCachedPage(maxAge time.Duration) CachedPage {
@@ -46,7 +64,7 @@ func (c *CachedPage) Valid() (v bool) {
 	return
 }
 
-// invalidate the cache
+// invalidates the cache
 func (c *CachedPage) Clear() (v bool) {
 	c.Lock()
 	defer c.Unlock()
@@ -109,7 +127,7 @@ func (c *CachedPage) GetStatistics() (requests, updates uint64) {
 	return
 }
 
-// reset the counter
+// reset the statistics counter
 func (c *CachedPage) ClearStatistics() (requests, updates uint64) {
 	c.Lock()
 	defer c.Unlock()

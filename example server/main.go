@@ -1,6 +1,15 @@
 // dheilema 2018
 // cached server example
 
+/*
+A test webserver using the webcache. It simulates an backend API
+that takes 5 seconds to run. The content is cached for 10 seconds.
+
+To test it start it from the cli
+ go run main.go
+and open some browser tabs to http://localhost:8080
+or http://localhost:8080/clear/
+*/
 package main
 
 import (
