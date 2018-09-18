@@ -21,6 +21,7 @@ package webcache
 
 import (
 	"errors"
+	"net/http"
 	"sync"
 	"time"
 )
@@ -43,17 +44,17 @@ type CachedPage struct {
 	updates      uint64
 }
 
-// creates a new CachedPage
+// NewCachedPage creates a new cached page.
 //
 // maxAge defines how long the content will stay valid
-// after an update
+// after an update.
 func NewCachedPage(maxAge time.Duration) CachedPage {
 	c := CachedPage{}
 	c.maxAge = maxAge
 	return c
 }
 
-// returns if the cached content is valid (not aged out)
+// Valid reports if the cached content is valid (not aged out)
 func (c *CachedPage) Valid() (v bool) {
 	c.RLock()
 	defer c.RUnlock()
@@ -64,7 +65,7 @@ func (c *CachedPage) Valid() (v bool) {
 	return
 }
 
-// invalidates the cache
+// Clear invalidates the cache.
 func (c *CachedPage) Clear() (v bool) {
 	c.Lock()
 	defer c.Unlock()
@@ -72,7 +73,7 @@ func (c *CachedPage) Clear() (v bool) {
 	return
 }
 
-// the struct can be used as io.Writer
+// Write implements io.Writer.
 func (c *CachedPage) Write(p []byte) (int, error) {
 	c.Lock()
 	defer c.Unlock()
@@ -84,7 +85,7 @@ func (c *CachedPage) Write(p []byte) (int, error) {
 	return n, nil
 }
 
-// mark the update transaction as "in progress"
+// StartUpdate marks the update transaction as "in progress".
 func (c *CachedPage) StartUpdate() error {
 	c.Lock()
 	defer c.Unlock()
@@ -96,7 +97,7 @@ func (c *CachedPage) StartUpdate() error {
 	return nil
 }
 
-// mark the update transaction as "finished"
+// EndUpdate marks the update transaction as "finished".
 func (c *CachedPage) EndUpdate() {
 	c.Lock()
 	defer c.Unlock()
@@ -106,7 +107,7 @@ func (c *CachedPage) EndUpdate() {
 	c.updates++
 }
 
-// get content
+// Get returns the content.
 func (c *CachedPage) Get() (out []byte) {
 	c.RLock()
 	out = c.content
@@ -117,8 +118,16 @@ func (c *CachedPage) Get() (out []byte) {
 	return
 }
 
-// get metrics of requests handled by cache
-// and number of updates
+// GetLastModified returns the time in rfc7232 format.
+func (c *CachedPage) GetLastModified() (out string) {
+	c.RLock()
+	out = c.lastModified.Format(http.TimeFormat)
+	c.RUnlock()
+	return
+}
+
+// GetStatistics returns  metrics of requests handled by cache
+// and number of updates.
 func (c *CachedPage) GetStatistics() (requests, updates uint64) {
 	c.RLock()
 	defer c.RUnlock()
@@ -127,7 +136,7 @@ func (c *CachedPage) GetStatistics() (requests, updates uint64) {
 	return
 }
 
-// reset the statistics counter
+// ClearStatistics reset the statistics counter
 func (c *CachedPage) ClearStatistics() (requests, updates uint64) {
 	c.Lock()
 	defer c.Unlock()

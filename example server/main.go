@@ -66,6 +66,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 			apiCache.EndUpdate()
 		}
 	}
+	w.Header().Set("Last-Modified", apiCache.GetLastModified())
 	w.Write(apiCache.Get())
 }
 
