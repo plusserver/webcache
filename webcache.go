@@ -2,15 +2,27 @@
 // web cache
 
 /*
-package webcache is a lightweight memory cache for go web servers that you
-can wrap around time consuming requests. Instead of
- result := complexBackendFunction() // takes long time to come back
- w.Write(result)
-Wrap in with a Cache object
- if !apiCache.Valid() {
-   if apiCache.StartUpdate() == nil {
-     apiCache.Write(complexBackendFunction())
-     apiCache.EndUpdate()
+Package webcache is a lightweight memory cache for go web servers that you
+can wrap around time consuming requests. The content type is []byte
+to allow a simple modification of the code.
+
+If you have an long running function returning []byte which is called
+with every request
+ func apiHandler(w http.ResponseWriter, r *http.Request) {
+   ...
+   w.Write(complexBackendFunction()) // takes long time to come back
+ }
+you can modify this to write the backend function into a CachedPage struct
+and update it only if the content is too old.
+ apiCache = webcache.NewCachedPage(time.Second * 90) // cache for 90 seconds
+ ...
+ func apiHandler(w http.ResponseWriter, r *http.Request) {
+   ...
+   if !apiCache.Valid() {
+     if apiCache.StartUpdate() == nil {
+       apiCache.Write(complexBackendFunction())
+       apiCache.EndUpdate()
+     }
    }
  }
  w.Write(apiCache.Get())
@@ -26,9 +38,10 @@ import (
 	"time"
 )
 
+// Error codes returned by this package
 var (
-	ErrUpdateInProgress   = errors.New("Another Update is already running")
-	ErrWriteWithoutUpdate = errors.New("Writing to struct without StartUpdate()")
+	ErrUpdateInProgress   = errors.New("Another Update is already running")       // StartUpdate() can be called just once
+	ErrWriteWithoutUpdate = errors.New("Writing to struct without StartUpdate()") // Write() is only allowed after StartUpdate()
 )
 
 // CachedPage stores the page data. There is no direct access to the fields
@@ -119,6 +132,8 @@ func (c *CachedPage) Get() (out []byte) {
 }
 
 // GetLastModified returns the time in rfc7232 format.
+// Set the header of the response writer with
+//  w.Header().Set("Last-Modified", apiCache.GetLastModified())
 func (c *CachedPage) GetLastModified() (out string) {
 	c.RLock()
 	out = c.lastModified.Format(http.TimeFormat)
